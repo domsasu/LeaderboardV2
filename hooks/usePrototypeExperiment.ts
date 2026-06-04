@@ -21,7 +21,7 @@ function readBodyExperiment(): string | null {
 }
 
 /**
- * Current prototype toolbar experiment id (`a`, `b`, …), kept in sync with
+ * Current prototype toolbar experiment id (`a`, `b`, `c`, `d`, …), kept in sync with
  * `sessionStorage`, `body.proto-experiment-*`, and the `experiment-changed` event.
  */
 export function usePrototypeExperiment(): string {

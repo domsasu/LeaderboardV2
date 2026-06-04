@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { HomeLeaderboardExperimentB } from './HomeLeaderboardExperimentB';
+import { HomeLeaderboardExperimentD } from './HomeLeaderboardExperimentD';
 import { Icons } from './Icons';
 import {
   MiniLeaderboardRow,
@@ -19,7 +20,10 @@ import {
   getHomeLeaderboardCohortTabs,
   type HomeLeaderboardCohortId,
 } from './homeLeaderboardSprint1Data';
-import { areHomeLeaderboardUnlockLessonsComplete } from './homeLeaderboardGate';
+import {
+  areHomeLeaderboardUnlockLessonsComplete,
+  isHomeLeaderboardExperimentBCard,
+} from './homeLeaderboardGate';
 
 // Assessment sub-skill results type - matches App.tsx
 interface AssessmentSubSkillResults {
@@ -1007,7 +1011,12 @@ export const Home: React.FC<HomeProps> = ({
           id="proto-home-leaderboard"
           data-prototype-experiment={experimentId}
         >
-          {(experimentId === 'b' || experimentId === 'c') ? (
+          {experimentId === 'd' ? (
+            <HomeLeaderboardExperimentD
+              leaderboardUnlocked={leaderboardUnlocked}
+              onResumeLearning={onResume}
+            />
+          ) : isHomeLeaderboardExperimentBCard(experimentId) ? (
             <HomeLeaderboardExperimentB
               experimentId={experimentId}
               leaderboardUnlocked={leaderboardUnlocked}

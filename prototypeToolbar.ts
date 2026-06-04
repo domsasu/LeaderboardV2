@@ -17,7 +17,7 @@ type PrototypeToolbarInitConfig = Record<string, unknown>;
  * @see https://github.com/nella-droid/coursera-prototype-toolbar
  */
 export function initCourseraPrototypeToolbar(handlers: {
-  /** Marks m1-l1–m1-l5 complete so the home leaderboard (experiments B/C) shows the populated state. */
+  /** Marks m1-l1–m1-l5 complete so the home leaderboard (experiments B/C/D) shows the populated state. */
   onSimulateLeaderboardUnlocked: () => void;
 }): void {
   const PT = window.PrototypeToolbar;
@@ -34,6 +34,7 @@ export function initCourseraPrototypeToolbar(handlers: {
       { id: 'a', label: 'Experiment A' },
       { id: 'b', label: 'Experiment B' },
       { id: 'c', label: 'Experiment C' },
+      { id: 'd', label: 'Experiment D' },
     ],
     reloadOnExperimentChange: false,
 
@@ -133,6 +134,52 @@ export function initCourseraPrototypeToolbar(handlers: {
               },
               {
                 text: 'Blurred Top 3 / Around you + unlock message until complete',
+                hl: '#proto-home-leaderboard',
+              },
+            ],
+          },
+          {
+            title: 'Shared with A',
+            items: [
+              { text: 'Up next + coach module', hl: '#proto-home-up-next' },
+              { text: 'Streak widget', hl: '#proto-home-streak' },
+            ],
+          },
+        ],
+      },
+      d: {
+        notice:
+          'Home leaderboard slot uses `HomeLeaderboardExperimentD`: Figma 278:4639 promotion (headline + weekly copy + Resume learning) with animated media on the right until m1-l1–m1-l5 unlock; then the same sprint-1 board as B/C.',
+        sections: [
+          {
+            title: 'Visual treatment (D — leaderboard promo)',
+            items: [
+              {
+                text: 'Hero + welcome + course preview',
+                hl: '#proto-home-hero',
+                children: [
+                  { text: 'Welcome / progress block', hl: '#proto-home-welcome' },
+                ],
+              },
+              {
+                text: 'Today’s goals widget',
+                hl: '#proto-home-daily-goals',
+              },
+              {
+                text: 'Leaderboard: promo band + motion media (see `HomeLeaderboardExperimentD`)',
+                hl: '#proto-home-leaderboard',
+              },
+            ],
+          },
+          {
+            title: 'Leaderboard layout (D — promo until unlock)',
+            items: [
+              {
+                text: 'Two-column promo: copy + gradient headline + Resume learning; right column media (`public/leaderboard-promo-experiment-d.png`, optional GIF swap)',
+                hl: '#proto-home-leaderboard',
+              },
+              {
+                text: 'After unlock: same Top 3 / Around you board as B/C',
                 hl: '#proto-home-leaderboard',
               },
             ],

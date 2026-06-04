@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MiniLeaderboardRow } from './MyLearning';
+import { isHomeLeaderboardBlurGateExperiment } from './homeLeaderboardGate';
 import {
   HOME_LEADERBOARD_B_BOARDS,
   HOME_LEADERBOARD_B_FILTER_OPTIONS,
@@ -8,7 +9,7 @@ import {
 
 /**
  * Home leaderboard — Experiments B and C (Figma 222:1854 layout).
- * Experiment A uses `HomeLeaderboard` instead.
+ * Experiment A uses `HomeLeaderboard` instead; experiment **D** uses `HomeLeaderboardExperimentD`.
  *
  * - **B:** entire card hidden until `m1-l1`–`m1-l5` are completed (`leaderboardUnlocked`). When visible,
  *   shows full sprint-1 header (days left, subtitle, cohort select, Edit cohorts).
@@ -18,9 +19,12 @@ import {
 export function HomeLeaderboardExperimentB({
   experimentId,
   leaderboardUnlocked,
+  /** When set, overrides `data-prototype-experiment` (e.g. D unlocked renders C logic but keeps `d` in QA). */
+  prototypeExperiment,
 }: {
   experimentId: string;
   leaderboardUnlocked: boolean;
+  prototypeExperiment?: string;
 }) {
   const [filterId, setFilterId] = useState<HomeLeaderboardBFilterId>('careerswitchers');
   const board = HOME_LEADERBOARD_B_BOARDS[filterId];
@@ -29,9 +33,10 @@ export function HomeLeaderboardExperimentB({
     return null;
   }
 
-  const showBlurGrid = experimentId === 'c' && !leaderboardUnlocked;
+  const isBlurGateVariant = isHomeLeaderboardBlurGateExperiment(experimentId);
+  const showBlurGrid = isBlurGateVariant && !leaderboardUnlocked;
   const showFullHeaderChrome =
-    experimentId === 'b' || (experimentId === 'c' && leaderboardUnlocked);
+    experimentId === 'b' || (isBlurGateVariant && leaderboardUnlocked);
 
   const leaderboardGrid = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -69,7 +74,7 @@ export function HomeLeaderboardExperimentB({
   return (
     <div
       className="rounded-[var(--cds-border-radius-200)] bg-[var(--cds-color-white)] p-4 sm:p-5"
-      data-prototype-experiment={experimentId}
+      data-prototype-experiment={prototypeExperiment ?? experimentId}
     >
       {showFullHeaderChrome ? (
         <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

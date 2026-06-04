@@ -21,8 +21,8 @@ View your app in AI Studio: https://ai.studio/apps/drive/161PQcgIc24BwVXMWnOArxo
 3. Run the app:
    `npm run dev`
 
-## Prototype toolbar (experiments A / B / C)
+## Prototype toolbar (experiments A / B / C / D)
 
-This repo includes [Coursera Prototype Toolbar](https://github.com/nella-droid/coursera-prototype-toolbar) (`public/prototype-toolbar.js` + `.css`, wired in `index.html`). Configuration lives in `prototypeToolbar.ts`; `App.tsx` wires the **Leaderboard Unlocked** trigger (marks m1-l1–m1-l5 complete for home leaderboard demos). Switch **Experiment B** or **Experiment C** on the home page for alternate leaderboard layouts and styling (`index.css`, `body.proto-experiment-b` / `body.proto-experiment-c`).
+This repo includes [Coursera Prototype Toolbar](https://github.com/nella-droid/coursera-prototype-toolbar) (`public/prototype-toolbar.js` + `.css`, wired in `index.html`). Configuration lives in `prototypeToolbar.ts`; `App.tsx` wires the **Leaderboard Unlocked** trigger (marks m1-l1–m1-l5 complete for home leaderboard demos). Switch **Experiment B**, **C**, or **D** on the home page for alternate leaderboard layouts and styling (`index.css`, `body.proto-experiment-b` / `body.proto-experiment-c` / `body.proto-experiment-d`). **D** uses a leaderboard **promotion** band (Figma 278:4639) until unlock; replace `public/leaderboard-promo-experiment-d.png` with your own GIF/PNG if needed.
 
 **Variant-specific UI:** use `ExperimentGate` + `experimentId` so a change for one experiment does not show in the other unless you promote it to shared markup. See [docs/experiment-variants.md](docs/experiment-variants.md).

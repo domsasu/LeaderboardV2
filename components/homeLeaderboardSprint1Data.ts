@@ -1,4 +1,5 @@
 import type { LeaderboardPeer } from './MyLearning';
+import { usesWiderHomeLeaderboardCohortTabs } from './homeLeaderboardGate';
 
 /**
  * Home leaderboard — Sprint 1 (Figma: Leaderboards_Home, node 218:3486).
@@ -8,8 +9,9 @@ import type { LeaderboardPeer } from './MyLearning';
  * - **Experiment A** (`experimentId === 'a'`): trimmed tab strip (e.g. no #Thoughtful skeptics).
  * - **Experiment B** (`experimentId === 'b'`): home leaderboard UI is `HomeLeaderboardExperimentB`
  *   (Figma 222:1854 — sprint-1 header + two-column board, not the pill strip). The pill list `HOME_LEADERBOARD_COHORT_TABS_B`
- *   is only used for session/cohort id validation when switching A ↔ B/C; the B/C card uses `homeLeaderboardExperimentBData` cohort options instead.
+ *   is only used for session/cohort id validation when switching A ↔ B/C/D; the B/C/D card uses `homeLeaderboardExperimentBData` cohort options instead.
  * - **Experiment C** (`experimentId === 'c'`): same B layout with blurred leaderboard grid until unlock (see docs).
+ * - **Experiment D** (`experimentId === 'd'`): home leaderboard slot is `HomeLeaderboardExperimentD` until unlock, then the same board as B/C (`HomeLeaderboardExperimentB`).
  *
  * Board data for every cohort id lives in `HOME_LEADERBOARD_BOARDS`; only tabs shown
  * per experiment are filtered by `getHomeLeaderboardCohortTabs`.
@@ -44,7 +46,9 @@ const HOME_LEADERBOARD_COHORT_TABS_B: HomeLeaderboardCohortTab[] = [
  * Anything not returned here is hidden for that variant (but board data may still exist).
  */
 export function getHomeLeaderboardCohortTabs(experimentId: string): HomeLeaderboardCohortTab[] {
-  return experimentId === 'b' || experimentId === 'c' ? HOME_LEADERBOARD_COHORT_TABS_B : HOME_LEADERBOARD_COHORT_TABS_A;
+  return usesWiderHomeLeaderboardCohortTabs(experimentId)
+    ? HOME_LEADERBOARD_COHORT_TABS_B
+    : HOME_LEADERBOARD_COHORT_TABS_A;
 }
 
 export type HomeLeaderboardBoard = {
