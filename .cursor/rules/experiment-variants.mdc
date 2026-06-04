@@ -1,0 +1,16 @@
+---
+description: Prototype toolbar experiments — avoid leaking variant-specific UI
+globs: components/Home.tsx,**/Home*.tsx,prototypeToolbar.ts,index.css
+---
+
+# Experiment variants (toolbar A / B / C)
+
+- **Shared UI:** normal JSX — visible in every experiment.
+- **One variant only:** wrap in `ExperimentGate` from `components/ExperimentGate.tsx` with `experimentId` from props and `variants={['a']}`, `variants={['b']}`, or `variants={['b','c']}` as needed.
+- **CSS-only for one variant:** use `body.proto-experiment-a` / `body.proto-experiment-b` / `body.proto-experiment-c` in `index.css`, not unscoped Tailwind in shared components.
+
+- **Home leaderboard tabs:** cohort pills come from `getHomeLeaderboardCohortTabs(experimentId)` in `homeLeaderboardSprint1Data.ts` (`HOME_LEADERBOARD_COHORT_TABS_A` vs `_B` for **b** and **c**). Edit only the list for the experiment you mean to change.
+
+- **Home leaderboard B/C:** `HomeLeaderboardExperimentB` + `homeLeaderboardExperimentBData`. Unlock when `m1-l1`–`m1-l5` are completed (`areHomeLeaderboardUnlockLessonsComplete` in `homeLeaderboardGate.ts`). **B** hides the card until unlock; **C** blurs the Top 3 / Around you grid with overlay until unlock.
+
+When changing other `Home` / `HomeLeaderboard` markup, use `ExperimentGate` or scoped CSS so B/C-only work does not appear in A unless intentional.

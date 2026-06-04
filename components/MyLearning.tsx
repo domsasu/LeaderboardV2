@@ -264,15 +264,20 @@ export function MiniLeaderboardRow({
   peer,
   isUser,
   isMedal,
+  showYouSuffix = false,
 }: {
   peer: LeaderboardPeer;
   isUser: boolean;
   isMedal: boolean;
+  /** When true and `isUser`, appends " (You)" (home sprint design). */
+  showYouSuffix?: boolean;
 }) {
   return (
     <div
       className={`flex h-[38px] min-h-[38px] items-center gap-1.5 ${
-        isUser ? 'rounded-none bg-[#FFF4E8] -mx-5 px-5' : ''
+        isUser
+          ? 'rounded-none bg-[color-mix(in_srgb,var(--cds-color-yellow-50)_95%,var(--cds-color-white)_5%)] -mx-5 px-5'
+          : ''
       }`}
     >
       <span className="w-7 shrink-0 text-left">
@@ -297,6 +302,7 @@ export function MiniLeaderboardRow({
       />
       <span className={`min-w-0 flex-1 truncate ${isUser ? 'cds-action-secondary text-[var(--cds-color-grey-975)]' : 'cds-body-secondary text-[var(--cds-color-grey-975)]'}`}>
         {peer.name}
+        {showYouSuffix && isUser ? ' (You)' : ''}
       </span>
       <span className={`shrink-0 tabular-nums ${isUser ? 'cds-action-secondary text-[var(--cds-color-grey-975)]' : 'cds-body-secondary text-[var(--cds-color-grey-600)]'}`}>
         {peer.hours}

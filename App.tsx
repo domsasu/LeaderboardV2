@@ -1,6 +1,8 @@
 
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { initCourseraPrototypeToolbar } from './prototypeToolbar';
+import { usePrototypeExperiment } from './hooks/usePrototypeExperiment';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { MainContent } from './components/MainContent';
@@ -42,6 +44,8 @@ export interface AssessmentSubSkillResults {
 }
 
 const App: React.FC = () => {
+  const experimentId = usePrototypeExperiment();
+
   // Initialize state with the constant data so we can modify it (e.g. mark as completed)
   const [courseData, setCourseData] = useState<CourseData>(COURSE_DATA);
 
@@ -100,6 +104,39 @@ const App: React.FC = () => {
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState<number>(60 * 60); // Default 60 min in seconds
   const [isEarlySessionEnd, setIsEarlySessionEnd] = useState(false);
+
+  /** Coursera prototype toolbar — trigger “Simulate module complete” / feature action */
+  const simulateModuleCompleteDemoRef = useRef<() => void>(() => {});
+  simulateModuleCompleteDemoRef.current = () => {
+    const mod =
+      courseData.modules.find((m) => m.lessons.some((l) => l.id === activeLessonId)) ??
+      courseData.modules[0];
+    if (!mod) return;
+    const itemsDone = mod.lessons.filter((l) => l.status === Status.COMPLETED).length;
+    const totalMinutes = mod.lessons
+      .filter((l) => l.status === Status.COMPLETED && l.duration)
+      .reduce((acc, lesson) => {
+        const duration = lesson.duration || '';
+        const minMatch = duration.match(/(\d+)\s*min/);
+        const hourMatch = duration.match(/(\d+)\s*h/);
+        const secMatch = duration.match(/(\d+)\s*sec/);
+        if (hourMatch) return acc + parseInt(hourMatch[1], 10) * 60;
+        if (minMatch) return acc + parseInt(minMatch[1], 10);
+        if (secMatch) return acc + Math.round(parseInt(secMatch[1], 10) / 60);
+        return acc;
+      }, 0);
+    const hours = Math.max(0.1, Math.round((totalMinutes / 60) * 10) / 10);
+    setCompletedModuleTitle(mod.title);
+    setCompletedModuleHours(hours);
+    setCompletedModuleItems(itemsDone || mod.lessons.length);
+    setShowModuleComplete(true);
+  };
+
+  useEffect(() => {
+    initCourseraPrototypeToolbar({
+      onSimulateModuleComplete: () => simulateModuleCompleteDemoRef.current(),
+    });
+  }, []);
 
   // Derive the active lesson object from the current course data state
   const activeLesson = useMemo(() => {
@@ -756,6 +793,7 @@ const App: React.FC = () => {
             onTakeSkillAssessment={navigateToAssessment}
             dailyTimeGoal={dailyTimeGoal}
             introModalClosed={true}
+            experimentId={experimentId}
           />
         )}
 

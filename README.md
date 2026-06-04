@@ -20,3 +20,9 @@ View your app in AI Studio: https://ai.studio/apps/drive/161PQcgIc24BwVXMWnOArxo
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Prototype toolbar (experiments A / B / C)
+
+This repo includes [Coursera Prototype Toolbar](https://github.com/nella-droid/coursera-prototype-toolbar) (`public/prototype-toolbar.js` + `.css`, wired in `index.html`). Configuration lives in `prototypeToolbar.ts`; `App.tsx` connects the **Simulate module complete** trigger to the module completion modal. Switch **Experiment B** or **Experiment C** on the home page for alternate leaderboard layouts and styling (`index.css`, `body.proto-experiment-b` / `body.proto-experiment-c`).
+
+**Variant-specific UI:** use `ExperimentGate` + `experimentId` so a change for one experiment does not show in the other unless you promote it to shared markup. See [docs/experiment-variants.md](docs/experiment-variants.md).
