@@ -17,8 +17,8 @@ type PrototypeToolbarInitConfig = Record<string, unknown>;
  * @see https://github.com/nella-droid/coursera-prototype-toolbar
  */
 export function initCourseraPrototypeToolbar(handlers: {
-  /** Opens {@link import('./components/ModuleCompletionModal')} with demo completion data. */
-  onSimulateModuleComplete: () => void;
+  /** Marks m1-l1–m1-l5 complete so the home leaderboard (experiments B/C) shows the populated state. */
+  onSimulateLeaderboardUnlocked: () => void;
 }): void {
   const PT = window.PrototypeToolbar;
   if (!PT) {
@@ -59,15 +59,6 @@ export function initCourseraPrototypeToolbar(handlers: {
               { text: 'Leaderboard (Sprint 1: tabs, rank line, collapse, edit)', hl: '#proto-home-leaderboard' },
             ],
           },
-          {
-            title: 'Evaluator',
-            items: [
-              {
-                text: 'Simulate module complete → opens completion modal (demo data)',
-                action: 'openModuleCompleteDemo',
-              },
-            ],
-          },
         ],
       },
       b: {
@@ -95,10 +86,9 @@ export function initCourseraPrototypeToolbar(handlers: {
             title: 'Leaderboard layout (B only — Figma 222:1854)',
             items: [
               {
-                text: '7-day badge, 2-week hours subtitle, Edit cohorts + cohort dropdown',
+                text: 'Leaderboard heading + two-column board (Top 3 / Around you)',
                 hl: '#proto-home-leaderboard',
               },
-              { text: 'Cohort filter dropdown', hl: '#proto-home-lb-b-cohort' },
             ],
           },
           {
@@ -106,17 +96,13 @@ export function initCourseraPrototypeToolbar(handlers: {
             items: [
               { text: 'Up next + coach module', hl: '#proto-home-up-next' },
               { text: 'Streak widget', hl: '#proto-home-streak' },
-              {
-                text: 'Simulate module complete (same trigger as bolt menu)',
-                action: 'openModuleCompleteDemo',
-              },
             ],
           },
         ],
       },
       c: {
         notice:
-          'Same home leaderboard layout as B (`HomeLeaderboardExperimentB`). Until m1-l1–m1-l5 are completed, the Top 3 / Around you grid is blurred with a “Learn for 30 minutes…” overlay; header and cohort controls stay visible.',
+          'Same home leaderboard layout as B (`HomeLeaderboardExperimentB`). Until m1-l1–m1-l5 are completed, the Top 3 / Around you grid is blurred with centered “Learn for 30 minutes…” title text; the Leaderboard heading stays visible.',
         sections: [
           {
             title: 'Visual treatment (C)',
@@ -142,12 +128,11 @@ export function initCourseraPrototypeToolbar(handlers: {
             title: 'Leaderboard layout (C — B + blur gate)',
             items: [
               {
-                text: '7-day badge, 2-week hours subtitle, Edit cohorts + cohort dropdown (always visible)',
+                text: 'Leaderboard heading (always visible when card is shown)',
                 hl: '#proto-home-leaderboard',
               },
-              { text: 'Cohort filter dropdown', hl: '#proto-home-lb-c-cohort' },
               {
-                text: 'Blurred Top 3 / Around you + overlay until unlock',
+                text: 'Blurred Top 3 / Around you + unlock message until complete',
                 hl: '#proto-home-leaderboard',
               },
             ],
@@ -157,29 +142,18 @@ export function initCourseraPrototypeToolbar(handlers: {
             items: [
               { text: 'Up next + coach module', hl: '#proto-home-up-next' },
               { text: 'Streak widget', hl: '#proto-home-streak' },
-              {
-                text: 'Simulate module complete (same trigger as bolt menu)',
-                action: 'openModuleCompleteDemo',
-              },
             ],
           },
         ],
       },
     },
 
-    actions: {
-      openModuleCompleteDemo: () => {
-        handlers.onSimulateModuleComplete();
-        return true;
-      },
-    },
-
     triggers: [
       {
-        label: 'Simulate module complete',
-        icon: 'workspace_premium',
+        label: 'Leaderboard Unlocked',
+        icon: 'leaderboard',
         onClick: () => {
-          handlers.onSimulateModuleComplete();
+          handlers.onSimulateLeaderboardUnlocked();
         },
       },
     ],

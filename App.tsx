@@ -6,7 +6,6 @@ import { usePrototypeExperiment } from './hooks/usePrototypeExperiment';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { MainContent } from './components/MainContent';
-import { ModuleCompletionModal } from './components/ModuleCompletionModal';
 import { DailyGoalsCompletionModal } from './components/DailyGoalsCompletionModal';
 import { DailyGoalSummaryModal } from './components/DailyGoalSummaryModal';
 import type { DailyTimeGoal } from './components/DailyTimeGoalModal';
@@ -21,6 +20,7 @@ import { AssessmentStart } from './components/AssessmentStart';
 import { AssessmentResult } from './components/AssessmentResult';
 import { BadgeAchievement } from './components/BadgeAchievement';
 import { COURSE_DATA } from './constants';
+import { HOME_LEADERBOARD_UNLOCK_LESSON_IDS } from './components/homeLeaderboardGate';
 import {
   aggregateSkillPoints,
   buildDailyGoalLessonIds,
@@ -61,7 +61,6 @@ const App: React.FC = () => {
   const [assessmentResults, setAssessmentResults] = useState<AssessmentSubSkillResults | null>(null);
 
   // Modal State
-  const [showModuleComplete, setShowModuleComplete] = useState(false);
   const [showDailyGoalsComplete, setShowDailyGoalsComplete] = useState(false);
   // New Modal States
   const [showPersonalizeModal, setShowPersonalizeModal] = useState(false);
@@ -74,11 +73,6 @@ const App: React.FC = () => {
     buildDailyGoalLessonIds(COURSE_DATA, "m1-l1", 60)
   );
   
-  const [completedModuleTitle, setCompletedModuleTitle] = useState("");
-  const [completedModuleHours, setCompletedModuleHours] = useState(0);
-  const [completedModuleItems, setCompletedModuleItems] = useState(0);
-  
-  // Track daily goal completions to accumulate sub-skill points
   const [dailyGoalCompletions, setDailyGoalCompletions] = useState(0);
   
   // Skill Progress View State
@@ -105,36 +99,24 @@ const App: React.FC = () => {
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState<number>(60 * 60); // Default 60 min in seconds
   const [isEarlySessionEnd, setIsEarlySessionEnd] = useState(false);
 
-  /** Coursera prototype toolbar — trigger “Simulate module complete” / feature action */
-  const simulateModuleCompleteDemoRef = useRef<() => void>(() => {});
-  simulateModuleCompleteDemoRef.current = () => {
-    const mod =
-      courseData.modules.find((m) => m.lessons.some((l) => l.id === activeLessonId)) ??
-      courseData.modules[0];
-    if (!mod) return;
-    const itemsDone = mod.lessons.filter((l) => l.status === Status.COMPLETED).length;
-    const totalMinutes = mod.lessons
-      .filter((l) => l.status === Status.COMPLETED && l.duration)
-      .reduce((acc, lesson) => {
-        const duration = lesson.duration || '';
-        const minMatch = duration.match(/(\d+)\s*min/);
-        const hourMatch = duration.match(/(\d+)\s*h/);
-        const secMatch = duration.match(/(\d+)\s*sec/);
-        if (hourMatch) return acc + parseInt(hourMatch[1], 10) * 60;
-        if (minMatch) return acc + parseInt(minMatch[1], 10);
-        if (secMatch) return acc + Math.round(parseInt(secMatch[1], 10) / 60);
-        return acc;
-      }, 0);
-    const hours = Math.max(0.1, Math.round((totalMinutes / 60) * 10) / 10);
-    setCompletedModuleTitle(mod.title);
-    setCompletedModuleHours(hours);
-    setCompletedModuleItems(itemsDone || mod.lessons.length);
-    setShowModuleComplete(true);
+  /** Prototype toolbar — mark m1-l1…m1-l5 complete so home leaderboard (B/C) unlocks */
+  const simulateLeaderboardUnlockedRef = useRef<() => void>(() => {});
+  simulateLeaderboardUnlockedRef.current = () => {
+    const unlockIds = new Set<string>(HOME_LEADERBOARD_UNLOCK_LESSON_IDS);
+    setCourseData((prev) => ({
+      ...prev,
+      modules: prev.modules.map((m) => ({
+        ...m,
+        lessons: m.lessons.map((l) =>
+          unlockIds.has(l.id) ? { ...l, status: Status.COMPLETED } : l
+        ),
+      })),
+    }));
   };
 
   useEffect(() => {
     initCourseraPrototypeToolbar({
-      onSimulateModuleComplete: () => simulateModuleCompleteDemoRef.current(),
+      onSimulateLeaderboardUnlocked: () => simulateLeaderboardUnlockedRef.current(),
     });
   }, []);
 
@@ -477,48 +459,6 @@ const App: React.FC = () => {
       };
       setCourseData(newCourseData);
       
-      // Check for module completion after daily goal lessons are marked complete
-      const currentModule = newCourseData.modules.find(m => 
-        m.lessons.some(l => l.id === activeLessonId)
-      );
-      if (currentModule) {
-        const allModuleLessonsComplete = currentModule.lessons.every(l => l.status === Status.COMPLETED);
-        if (allModuleLessonsComplete) {
-          // Calculate module stats
-          const totalMinutes = currentModule.lessons
-            .filter(l => l.status === Status.COMPLETED && l.duration)
-            .reduce((acc, lesson) => {
-              const duration = lesson.duration || '';
-              const minMatch = duration.match(/(\d+)\s*min/);
-              const hourMatch = duration.match(/(\d+)\s*h/);
-              const secMatch = duration.match(/(\d+)\s*sec/);
-              
-              if (hourMatch) return acc + parseInt(hourMatch[1]) * 60;
-              else if (minMatch) return acc + parseInt(minMatch[1]);
-              else if (secMatch) return acc + Math.round(parseInt(secMatch[1]) / 60);
-              return acc;
-            }, 0);
-          
-          const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
-          const itemsCompleted = currentModule.lessons.filter(l => l.status === Status.COMPLETED).length;
-          
-          setCompletedModuleTitle(currentModule.title);
-          setCompletedModuleHours(totalHours);
-          setCompletedModuleItems(itemsCompleted);
-          
-          // Show module completion modal (will show instead of daily goal summary for module completion)
-          const hasBigAnimationItem = dailyGoalLessonIds.includes('m1-l10');
-          const rippleDuration = dailyGoalLessonIds.length * 300;
-          const baseDelay = hasBigAnimationItem ? 4000 : 500;
-          const delay = baseDelay + rippleDuration + 300;
-          
-          setTimeout(() => {
-            setShowModuleComplete(true);
-          }, delay);
-          return;
-        }
-      }
-      
       const hasBigAnimationItem = dailyGoalLessonIds.includes('m1-l10');
       const rippleDuration = dailyGoalLessonIds.length * 300;
       const baseDelay = hasBigAnimationItem ? 4000 : 500;
@@ -534,15 +474,6 @@ const App: React.FC = () => {
 
     let nextLessonId: string | null = null;
     let foundCurrent = false;
-    let currentModuleId = "";
-
-    // Find which module the current lesson belongs to
-    for(const m of courseData.modules) {
-      if (m.lessons.some(l => l.id === activeLessonId)) {
-        currentModuleId = m.id;
-        break;
-      }
-    }
 
     // Create a deep copy of the course data to update the status
     const newCourseData = {
@@ -588,40 +519,6 @@ const App: React.FC = () => {
             setDailyGoalCompletions(prev => prev + 1);
         }
 
-        // Module Completion Logic
-        if (currentModuleId) {
-           const updatedModule = newCourseData.modules.find(m => m.id === currentModuleId);
-           if (updatedModule) {
-             const allComplete = updatedModule.lessons.every(l => l.status === Status.COMPLETED);
-             if (allComplete) {
-                setCompletedModuleTitle(updatedModule.title);
-                
-                const totalMinutes = updatedModule.lessons
-                  .filter(l => l.status === Status.COMPLETED && l.duration)
-                  .reduce((acc, lesson) => {
-                    const duration = lesson.duration || '';
-                    const minMatch = duration.match(/(\d+)\s*min/);
-                    const hourMatch = duration.match(/(\d+)\s*h/);
-                    const secMatch = duration.match(/(\d+)\s*sec/);
-                    
-                    if (hourMatch) return acc + parseInt(hourMatch[1]) * 60;
-                    else if (minMatch) return acc + parseInt(minMatch[1]);
-                    else if (secMatch) return acc + Math.round(parseInt(secMatch[1]) / 60);
-                    return acc;
-                  }, 0);
-                
-                const totalHours = Math.round((totalMinutes / 60) * 10) / 10;
-                const itemsCompleted = updatedModule.lessons.filter(l => l.status === Status.COMPLETED).length;
-                
-                setCompletedModuleHours(totalHours);
-                setCompletedModuleItems(itemsCompleted);
-                
-                setShowDailyGoalsComplete(false);
-                setShowModuleComplete(true);
-             }
-           }
-        }
-
         // Navigate
         if (nextLessonId) {
           setActiveLessonId(nextLessonId);
@@ -630,7 +527,6 @@ const App: React.FC = () => {
   };
 
   const navigateToDashboard = () => {
-    setShowModuleComplete(false);
     setShowDailyGoalsComplete(false);
     setShowSkillProgressView(false);
     setCurrentView('dashboard');
@@ -870,35 +766,6 @@ const App: React.FC = () => {
             assessmentResults={assessmentResults}
           />
         )}
-        
-        <ModuleCompletionModal 
-          isOpen={showModuleComplete} 
-          moduleTitle={completedModuleTitle}
-          hoursLearned={completedModuleHours}
-          itemsCompleted={completedModuleItems}
-          onClose={() => setShowModuleComplete(false)}
-          onTrackCareerProgress={navigateToDashboard}
-          onSkillBreakdown={navigateToDashboard}
-          totalModules={courseData.modules.length}
-          completedModules={courseData.modules.filter(m => 
-            m.lessons.every(l => l.status === Status.COMPLETED)
-          ).length}
-          moduleXP={(() => {
-            const currentModule = courseData.modules.find(m => 
-              m.lessons.some(l => l.id === activeLessonId)
-            );
-            if (!currentModule) return 0;
-            return currentModule.lessons
-              .filter(l => l.status === Status.COMPLETED)
-              .reduce((acc, lesson) => acc + getSkillPoints(lesson.type), 0);
-          })()}
-          skills={SKILL_SUBSKILLS.map((name) => ({
-            name,
-            points: Math.min(25, cumulativeSkillPoints[name] || 0),
-            total: 25,
-            earnedXP: Math.min(8, goalSkillPoints[name] || 0)
-          }))}
-        />
         
         <DailyGoalsCompletionModal
           isOpen={showDailyGoalsComplete}

@@ -3,14 +3,14 @@ import type { HomeLeaderboardBoard } from './homeLeaderboardSprint1Data';
 
 /**
  * Experiment B only — Figma Leaderboards_Home Sprint 1, node 222:1854.
- * Bi-weekly hours framing, urgency badge, cohort filter dropdown + “Edit cohorts”.
+ * Weekly hours framing; board data by cohort id (UI uses default cohort in prototype).
  */
 export type HomeLeaderboardBFilterId = 'careerswitchers' | 'coursera' | 'aipowered';
 
 export const HOME_LEADERBOARD_B_FILTER_OPTIONS: { id: HomeLeaderboardBFilterId; label: string }[] = [
-  { id: 'careerswitchers', label: '#careerswitchers – 428 ranked' },
-  { id: 'coursera', label: '#coursera – 1,255 ranked' },
-  { id: 'aipowered', label: '#AIpowered – 842 ranked' },
+  { id: 'careerswitchers', label: '#careerswitchers · 428 ranked' },
+  { id: 'coursera', label: '#coursera · 1,255 ranked' },
+  { id: 'aipowered', label: '#AIpowered · 842 ranked' },
 ];
 
 const BOARD_CAREERSWITCHERS: HomeLeaderboardBoard = {

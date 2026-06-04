@@ -11,6 +11,6 @@ globs: components/Home.tsx,**/Home*.tsx,prototypeToolbar.ts,index.css
 
 - **Home leaderboard tabs:** cohort pills come from `getHomeLeaderboardCohortTabs(experimentId)` in `homeLeaderboardSprint1Data.ts` (`HOME_LEADERBOARD_COHORT_TABS_A` vs `_B` for **b** and **c**). Edit only the list for the experiment you mean to change.
 
-- **Home leaderboard B/C:** `HomeLeaderboardExperimentB` + `homeLeaderboardExperimentBData`. Unlock when `m1-l1`–`m1-l5` are completed (`areHomeLeaderboardUnlockLessonsComplete` in `homeLeaderboardGate.ts`). **B** hides the card until unlock; **C** blurs the Top 3 / Around you grid with overlay until unlock.
+- **Home leaderboard B/C:** `HomeLeaderboardExperimentB` + `homeLeaderboardExperimentBData`. Unlock when `m1-l1`–`m1-l5` are completed (`areHomeLeaderboardUnlockLessonsComplete` in `homeLeaderboardGate.ts`). **B** hides the card until unlock, then shows full Figma header (days left, subtitle, cohort select). **C** blurs the grid until unlock with a **minimal** title-only header; after unlock, same header as B.
 
 When changing other `Home` / `HomeLeaderboard` markup, use `ExperimentGate` or scoped CSS so B/C-only work does not appear in A unless intentional.

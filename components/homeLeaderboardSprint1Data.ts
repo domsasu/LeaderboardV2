@@ -7,8 +7,8 @@ import type { LeaderboardPeer } from './MyLearning';
  * experiment do not remove tabs in the other unless you change both lists below.
  * - **Experiment A** (`experimentId === 'a'`): trimmed tab strip (e.g. no #Thoughtful skeptics).
  * - **Experiment B** (`experimentId === 'b'`): home leaderboard UI is `HomeLeaderboardExperimentB`
- *   (Figma 222:1854 — dropdown + “Edit cohorts”, not the pill strip). The pill list `HOME_LEADERBOARD_COHORT_TABS_B`
- *   is only used for session/cohort id validation when switching A ↔ B/C; it is not shown in the B/C leaderboard.
+ *   (Figma 222:1854 — sprint-1 header + two-column board, not the pill strip). The pill list `HOME_LEADERBOARD_COHORT_TABS_B`
+ *   is only used for session/cohort id validation when switching A ↔ B/C; the B/C card uses `homeLeaderboardExperimentBData` cohort options instead.
  * - **Experiment C** (`experimentId === 'c'`): same B layout with blurred leaderboard grid until unlock (see docs).
  *
  * Board data for every cohort id lives in `HOME_LEADERBOARD_BOARDS`; only tabs shown
