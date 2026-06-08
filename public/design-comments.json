@@ -1,1 +1,61 @@
-[]
+[
+  {
+    "id": "a7457a60-52da-46d1-aab2-9f96ad91616c",
+    "body": "make background white",
+    "selector": "#proto-home-leaderboard > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2)",
+    "createdAt": "2026-06-08T19:42:24.624Z",
+    "resolved": false,
+    "experimentId": "d"
+  },
+  {
+    "id": "d717ca10-46ee-4de1-8d85-1f45b9fde516",
+    "body": "remove CTA",
+    "selector": "#proto-home-leaderboard > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > button:nth-of-type(1)",
+    "createdAt": "2026-06-08T19:42:55.855Z",
+    "resolved": false,
+    "experimentId": "d"
+  },
+  {
+    "id": "c53d9a7d-7d48-4690-82a8-fe6e13c2825e",
+    "body": "change the title of this item",
+    "selector": "#daily-goal-block-0 > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1)",
+    "createdAt": "2026-06-08T19:45:51.895Z",
+    "resolved": false,
+    "experimentId": "d"
+  },
+  {
+    "id": "d9c3bbc9-a0fc-44e8-8d3a-d9907fb6fa11",
+    "body": "make this black",
+    "selector": "#proto-home-up-next > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3)",
+    "createdAt": "2026-06-08T19:59:37.913Z",
+    "resolved": false,
+    "experimentId": "d"
+  },
+  {
+    "id": "9c828ddd-34fd-4816-90a8-2a1a226724fd",
+    "author": "Dominique S",
+    "body": "test 1",
+    "selector": "#root > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(3) > h2:nth-of-type(1)",
+    "createdAt": "2026-06-08T22:50:59.787Z",
+    "resolved": false,
+    "experimentId": "b"
+  },
+  {
+    "id": "773e1579-cd1a-4940-995b-2222e31c2ed5",
+    "author": "Dominique S",
+    "body": "test 2",
+    "selector": "#proto-home-leaderboard > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1)",
+    "createdAt": "2026-06-08T22:51:45.304Z",
+    "resolved": false,
+    "experimentId": "b"
+  },
+  {
+    "id": "7378ac90-20a0-4747-bbfc-efb86999d7a0",
+    "author": "Dominique S",
+    "body": "make purple",
+    "selector": "#proto-home-up-next > div:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(3) > button:nth-of-type(1)",
+    "createdAt": "2026-06-08T22:56:45.080Z",
+    "resolved": false,
+    "experimentId": "b"
+  }
+]
