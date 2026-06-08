@@ -2,9 +2,11 @@
  * Prototype Toolbar — a drop-in dev toolbar for HTML prototypes.
  *
  * Adds a fixed bottom-left toolbar with:
+ *   • Collapse toggle  — far left; hides Home / experiment / features / triggers / comments to a single control (sessionStorage)
  *   • Home  — back link to your prototype's home/index page
  *   • Experiment switcher  — toggles between variants (sets body class + sessionStorage)
  *   • Features list  — opens an overlay listing per-experiment features, with click-to-highlight
+ *   • Design comments  — right panel: Git-tracked JSON (`/design-comments.json`), design-mode pick, Update copies agent prompt
  *   • Trigger events  — flyout of buttons that fire arbitrary callbacks (e.g. "open module complete dialog")
  *
  * Usage:
@@ -56,6 +58,8 @@
   var currentExp = null;
   var activeHighlightKey = null;
   var rootEl = null;
+  var collapseBtn = null;
+  var TOOLBAR_COLLAPSED_KEY = 'proto-toolbar-collapsed';
 
   /* ─── Utils ─────────────────────────────────────────────────────── */
 
@@ -242,6 +246,59 @@
     if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  /** Highlight DOM for a design comment; falls back to first `#id` if full path matches nothing (fragile nth-of-type). */
+  function highlightCommentTarget(selector) {
+    clearFeatureHighlights();
+    if (!selector || !String(selector).trim()) return;
+    var s = String(selector).trim();
+    if (applyFeatureHighlight(s)) {
+      scrollToHighlighted();
+      return;
+    }
+    var m = s.match(/#[a-zA-Z_][\w-]*/);
+    if (m) {
+      var idSel = m[0];
+      if (idSel !== s && applyFeatureHighlight(idSel)) {
+        scrollToHighlighted();
+      }
+    }
+  }
+
+  function clearCommentRowHoverHighlight() {
+    commentHoverTargets.forEach(function(el) {
+      if (el && el.classList) el.classList.remove('proto-design-hover-hl');
+    });
+    commentHoverTargets = [];
+  }
+
+  /** Blue ring on page target while pointer hovers a comment row (same class as design-mode hover). */
+  function applyCommentRowHoverHighlight(selector) {
+    clearCommentRowHoverHighlight();
+    if (!selector || !String(selector).trim()) return;
+    var s = String(selector).trim();
+    function addMatches(selStr) {
+      try {
+        document.querySelectorAll(selStr).forEach(function(el) {
+          el.classList.add('proto-design-hover-hl');
+          commentHoverTargets.push(el);
+        });
+      } catch (e) {}
+    }
+    addMatches(s);
+    if (!commentHoverTargets.length) {
+      var m = s.match(/#[a-zA-Z_][\w-]*/);
+      if (m) addMatches(m[0]);
+    }
+  }
+
+  window.addEventListener('proto-comment-highlight-run', function(ev) {
+    try {
+      var d = ev.detail;
+      if (!d || d.selector == null) return;
+      highlightCommentTarget(String(d.selector));
+    } catch (e) {}
+  });
+
   function renderFeatureItem(item, idx, parentIdx) {
     var key = parentIdx != null ? parentIdx + '-' + idx : String(idx);
     var hasInteraction = !!(item.hl || item.action || item.nav);
@@ -387,6 +444,72 @@
     return overlay;
   }
 
+  function readToolbarCollapsed() {
+    try {
+      return sessionStorage.getItem(TOOLBAR_COLLAPSED_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function writeToolbarCollapsed(collapsed) {
+    try {
+      if (collapsed) sessionStorage.setItem(TOOLBAR_COLLAPSED_KEY, '1');
+      else sessionStorage.removeItem(TOOLBAR_COLLAPSED_KEY);
+    } catch (e) {}
+  }
+
+  function closeToolbarChrome() {
+    closeFeaturesOverlay();
+    if (rootEl) {
+      rootEl.querySelectorAll('.proto-toolbar__tools.is-open').forEach(function(n) {
+        n.classList.remove('is-open');
+      });
+      rootEl.querySelectorAll('.proto-toolbar__exp.is-open').forEach(function(n) {
+        n.classList.remove('is-open');
+      });
+    }
+    if (commentsPanelEl && commentsPanelEl.classList.contains('is-open')) {
+      commentsPanelEl.classList.remove('is-open');
+      var b = rootEl && rootEl.querySelector('.proto-toolbar__comments-trigger');
+      if (b) b.setAttribute('aria-pressed', 'false');
+      stopDesignPickMode();
+      clearFeatureHighlights();
+      clearCommentRowHoverHighlight();
+    }
+  }
+
+  function applyToolbarCollapsed(collapsed) {
+    if (!rootEl) return;
+    rootEl.classList.toggle('is-collapsed', !!collapsed);
+    if (collapseBtn) {
+      collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      collapseBtn.setAttribute('aria-label', collapsed ? 'Expand prototype toolbar' : 'Collapse prototype toolbar');
+      collapseBtn.setAttribute('data-tooltip', collapsed ? 'Expand toolbar' : 'Collapse toolbar');
+      var ic = collapseBtn.querySelector('.material-symbols-rounded');
+      if (ic) ic.textContent = collapsed ? 'unfold_more' : 'unfold_less';
+    }
+    if (collapsed) closeToolbarChrome();
+  }
+
+  function buildCollapseToggleButton() {
+    var btn = el('button', {
+      type: 'button',
+      class: 'proto-toolbar__btn proto-toolbar__btn--icon proto-toolbar__collapse-toggle',
+      'aria-expanded': 'true',
+      'aria-label': 'Collapse prototype toolbar',
+      'data-tooltip': 'Collapse toolbar'
+    }, [icon('unfold_less')]);
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var becomeCollapsed = !rootEl.classList.contains('is-collapsed');
+      writeToolbarCollapsed(becomeCollapsed);
+      applyToolbarCollapsed(becomeCollapsed);
+    });
+    collapseBtn = btn;
+    return btn;
+  }
+
   /* ─── Triggers flyout ──────────────────────────────────────────── */
 
   function buildTriggersFlyout() {
@@ -435,6 +558,637 @@
     return wrapper;
   }
 
+  /* ─── Design comments (Git-tracked JSON) ─────────────────────── */
+
+  var commentsPanelEl = null;
+  var commentsListHost = null;
+  var commentsSearchInput = null;
+  var commentsDesignToggle = null;
+  var commentsUpdateBtn = null;
+  var commentsUpdateBtnRestoreTimer = null;
+  var commentsClipboardStatusEl = null;
+  var commentsData = [];
+  var designModeOn = false;
+  var designPickListener = null;
+  var designHoverListener = null;
+  var designHoverRaf = null;
+  var designHoverEl = null;
+  var commentsActiveRowId = null;
+  var COMMENTS_JSON_URL = '/design-comments.json';
+  var STORAGE_DISMISSED = 'proto-comments-dismissed';
+  var STORAGE_PENDING = 'proto-comments-pending';
+  var commentHoverTargets = [];
+
+  function loadDismissedIds() {
+    try {
+      var raw = sessionStorage.getItem(STORAGE_DISMISSED);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveDismissedIds(ids) {
+    sessionStorage.setItem(STORAGE_DISMISSED, JSON.stringify(ids));
+  }
+
+  function loadPendingComments() {
+    try {
+      var raw = sessionStorage.getItem(STORAGE_PENDING);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function savePendingComments(arr) {
+    sessionStorage.setItem(STORAGE_PENDING, JSON.stringify(arr));
+  }
+
+  function escapeCssId(id) {
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') return CSS.escape(id);
+    return id.replace(/([!"#$%&'()*+,./:;<=>?@[\]^`{|}~])/g, '\\$1');
+  }
+
+  function buildSelectorForElement(element) {
+    if (!element || element.nodeType !== 1) return '';
+    if (element.id) return '#' + escapeCssId(element.id);
+    var parts = [];
+    var cur = element;
+    while (cur && cur.nodeType === 1 && cur !== document.documentElement) {
+      var tag = cur.tagName.toLowerCase();
+      var parent = cur.parentElement;
+      if (!parent) break;
+      var sameTag = [];
+      for (var i = 0; i < parent.children.length; i++) {
+        if (parent.children[i].tagName === cur.tagName) sameTag.push(parent.children[i]);
+      }
+      var idx = sameTag.indexOf(cur) + 1;
+      parts.unshift(tag + ':nth-of-type(' + idx + ')');
+      cur = parent;
+      if (cur.id) {
+        parts.unshift('#' + escapeCssId(cur.id));
+        break;
+      }
+    }
+    return parts.join(' > ');
+  }
+
+  function newCommentId() {
+    if (global.crypto && typeof global.crypto.randomUUID === 'function') {
+      return global.crypto.randomUUID();
+    }
+    return 'c-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
+  }
+
+  function filterCommentRowsBySearch(rows) {
+    var q = (commentsSearchInput && commentsSearchInput.value || '').trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(function(c) {
+      return (
+        String(c.body || '').toLowerCase().indexOf(q) !== -1 ||
+        String(c.title || '').toLowerCase().indexOf(q) !== -1 ||
+        String(c.author || '').toLowerCase().indexOf(q) !== -1 ||
+        String(c.selector || '').toLowerCase().indexOf(q) !== -1
+      );
+    });
+  }
+
+  function getVisibleCommentsMerged() {
+    var dismissed = loadDismissedIds();
+    var pend = loadPendingComments();
+    var fromPending = pend.filter(function(c) {
+      if (dismissed.indexOf(c.id) !== -1) return false;
+      if (c.experimentId && c.experimentId !== currentExp) return false;
+      return true;
+    });
+    var fromFile = commentsData.filter(function(c) {
+      if (c.resolved) return false;
+      if (dismissed.indexOf(c.id) !== -1) return false;
+      if (c.experimentId && c.experimentId !== currentExp) return false;
+      return true;
+    });
+    return fromPending.concat(fromFile);
+  }
+
+  function renderCommentsList() {
+    if (!commentsListHost) return;
+    commentsListHost.innerHTML = '';
+    var merged = getVisibleCommentsMerged();
+    var rows = filterCommentRowsBySearch(merged);
+    if (!rows.length) {
+      var empty = el('div', { class: 'proto-comments-empty' }, []);
+      if (merged.length && commentsSearchInput && commentsSearchInput.value.trim()) {
+        empty.textContent = 'No comments match your search.';
+      } else {
+        empty.appendChild(document.createTextNode('No open comments for this experiment. Use Add comment, edit '));
+        empty.appendChild(el('code', { class: 'proto-comments-empty__code' }, ['public/design-comments.json']));
+        empty.appendChild(document.createTextNode(', or queue comments for Update.'));
+      }
+      commentsListHost.appendChild(empty);
+      return;
+    }
+    rows.forEach(function(c) {
+      var isQueued = loadPendingComments().some(function(p) { return p.id === c.id; });
+      var row = el('div', {
+        role: 'button',
+        tabindex: '0',
+        class: 'proto-comments-row' + (commentsActiveRowId === c.id ? ' is-active' : '') + (isQueued ? ' is-queued' : ''),
+        'data-comment-id': c.id,
+        'data-comment-sel': c.selector || ''
+      }, []);
+      var meta = el('div', { class: 'proto-comments-row__meta' }, [
+        el('span', { class: 'proto-comments-row__avatar', 'aria-hidden': 'true' }, [(c.author || '?').slice(0, 1).toUpperCase()]),
+        el('div', { class: 'proto-comments-row__meta-text' }, [
+          el('div', { class: 'proto-comments-row__title' }, [c.title || '(no title)']),
+          el('div', { class: 'proto-comments-row__sub' }, [
+            (c.author || 'Anonymous') + ' · ' + String(c.createdAt || '').slice(0, 10) + (isQueued ? ' · Queued' : '')
+          ])
+        ])
+      ]);
+      row.appendChild(meta);
+      row.appendChild(el('div', { class: 'proto-comments-row__body' }, [c.body || '']));
+      row.appendChild(el('div', { class: 'proto-comments-row__actions' }, [
+        el('button', {
+          type: 'button',
+          class: 'proto-comments-row__done',
+          'data-done-id': c.id
+        }, ['Done'])
+      ]));
+      commentsListHost.appendChild(row);
+    });
+
+    commentsListHost.querySelectorAll('.proto-comments-row').forEach(function(row) {
+      function activate(e) {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('.proto-comments-row__done')) return;
+        if (e.type === 'keydown' && e.key === ' ') e.preventDefault();
+        clearCommentRowHoverHighlight();
+        var sel = row.getAttribute('data-comment-sel');
+        var cid = row.getAttribute('data-comment-id');
+        commentsActiveRowId = cid;
+        renderCommentsList();
+        window.dispatchEvent(new CustomEvent('proto-comment-navigate', { detail: { selector: sel || '' } }));
+        if (e.type === 'keydown' && commentsListHost) {
+          var nr = commentsListHost.querySelector('.proto-comments-row[data-comment-id="' + cid + '"]');
+          if (nr) nr.focus();
+        }
+      }
+      row.addEventListener('click', activate);
+      row.addEventListener('keydown', activate);
+      row.addEventListener('mouseenter', function() {
+        applyCommentRowHoverHighlight(row.getAttribute('data-comment-sel'));
+      });
+      row.addEventListener('mouseleave', function() {
+        clearCommentRowHoverHighlight();
+      });
+    });
+
+    commentsListHost.querySelectorAll('.proto-comments-row__done').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = btn.getAttribute('data-done-id');
+        var d = loadDismissedIds();
+        if (d.indexOf(id) === -1) d.push(id);
+        saveDismissedIds(d);
+        var pend = loadPendingComments().filter(function(p) { return p.id !== id; });
+        savePendingComments(pend);
+        renderCommentsList();
+      });
+    });
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+    } finally {
+      document.body.removeChild(ta);
+    }
+    return Promise.resolve();
+  }
+
+  function closeCommentsModal() {
+    var m = document.querySelector('.proto-comments-modal-backdrop');
+    if (m && m._protoCommentsEsc) {
+      document.removeEventListener('keydown', m._protoCommentsEsc);
+      m._protoCommentsEsc = null;
+    }
+    if (m) m.remove();
+    document.body.style.overflow = '';
+  }
+
+  function openDesignCommentModal(selector) {
+    closeCommentsModal();
+    var capturedSelector = (selector || '').trim();
+    var backdrop = el('div', { class: 'proto-comments-modal-backdrop' }, []);
+    var modal = el('div', {
+      class: 'proto-comments-modal',
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'proto-comments-modal-title'
+    }, []);
+
+    var top = el('div', { class: 'proto-comments-modal__top' }, []);
+    var title = el('div', { class: 'proto-comments-modal__top-title', id: 'proto-comments-modal-title' }, ['New design comment']);
+    var submitBtn = el('button', {
+      type: 'button',
+      class: 'proto-comments-modal__submit-icon',
+      'aria-label': 'Queue comment for update'
+    }, [icon('arrow_upward')]);
+    top.appendChild(title);
+    top.appendChild(submitBtn);
+
+    var authorIn = el('input', {
+      type: 'text',
+      class: 'proto-comments-modal__input',
+      placeholder: 'Your name (optional)',
+      autocomplete: 'name'
+    });
+    var bodyIn = el('textarea', {
+      class: 'proto-comments-modal__textarea',
+      placeholder: 'Comment…',
+      required: true,
+      'aria-required': 'true'
+    });
+
+    function tryQueueDesignComment() {
+      var o = {
+        id: newCommentId(),
+        author: authorIn.value.trim() || undefined,
+        title: undefined,
+        body: bodyIn.value.trim(),
+        selector: capturedSelector,
+        createdAt: new Date().toISOString(),
+        resolved: false,
+        experimentId: currentExp
+      };
+      if (!o.body) {
+        bodyIn.focus();
+        return;
+      }
+      var pend = loadPendingComments();
+      pend.push(o);
+      savePendingComments(pend);
+      closeCommentsModal();
+      renderCommentsList();
+    }
+
+    submitBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      tryQueueDesignComment();
+    });
+
+    modal.appendChild(top);
+    modal.appendChild(el('label', { class: 'proto-comments-modal__label' }, ['Author']));
+    modal.appendChild(authorIn);
+    modal.appendChild(el('label', { class: 'proto-comments-modal__label' }, ['Comment']));
+    modal.appendChild(bodyIn);
+
+    backdrop.addEventListener('click', function(ev) {
+      if (!modal.contains(ev.target)) closeCommentsModal();
+    });
+
+    backdrop._protoCommentsEsc = function(ev) {
+      if (ev.key === 'Escape') closeCommentsModal();
+    };
+    document.addEventListener('keydown', backdrop._protoCommentsEsc);
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    document.body.style.overflow = 'hidden';
+    bodyIn.focus();
+  }
+
+  function clearDesignHover() {
+    if (designHoverEl) {
+      designHoverEl.classList.remove('proto-design-hover-hl');
+      designHoverEl = null;
+    }
+  }
+
+  function stopDesignPickMode() {
+    designModeOn = false;
+    clearDesignHover();
+    if (designHoverRaf != null) {
+      cancelAnimationFrame(designHoverRaf);
+      designHoverRaf = null;
+    }
+    if (designHoverListener) {
+      document.removeEventListener('mousemove', designHoverListener, true);
+      designHoverListener = null;
+    }
+    if (designPickListener) {
+      document.removeEventListener('click', designPickListener, true);
+      designPickListener = null;
+    }
+    document.body.classList.remove('proto-comments-design-mode');
+    if (commentsDesignToggle) {
+      commentsDesignToggle.classList.remove('is-on');
+      commentsDesignToggle.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  function startDesignPickMode() {
+    if (designModeOn) {
+      stopDesignPickMode();
+      return;
+    }
+    designModeOn = true;
+    document.body.classList.add('proto-comments-design-mode');
+    if (commentsDesignToggle) {
+      commentsDesignToggle.classList.add('is-on');
+      commentsDesignToggle.setAttribute('aria-pressed', 'true');
+    }
+    var hoverX = 0;
+    var hoverY = 0;
+    designHoverListener = function(ev) {
+      if (!designModeOn) return;
+      hoverX = ev.clientX;
+      hoverY = ev.clientY;
+      if (designHoverRaf != null) return;
+      designHoverRaf = requestAnimationFrame(function() {
+        designHoverRaf = null;
+        if (!designModeOn) return;
+        var under = document.elementFromPoint(hoverX, hoverY);
+        if (!under || under.nodeType !== 1) {
+          clearDesignHover();
+          return;
+        }
+        if (
+          under === document.body ||
+          under === document.documentElement ||
+          under.closest('.proto-toolbar') ||
+          under.closest('.proto-comments-panel') ||
+          under.closest('.proto-comments-modal-backdrop')
+        ) {
+          clearDesignHover();
+          return;
+        }
+        if (designHoverEl === under) return;
+        clearDesignHover();
+        designHoverEl = under;
+        designHoverEl.classList.add('proto-design-hover-hl');
+      });
+    };
+    document.addEventListener('mousemove', designHoverListener, true);
+    designPickListener = function(ev) {
+      if (!designModeOn) return;
+      var t = ev.target;
+      if (t.closest('.proto-toolbar') || t.closest('.proto-comments-panel') || t.closest('.proto-comments-modal-backdrop')) {
+        return;
+      }
+      ev.preventDefault();
+      ev.stopPropagation();
+      clearDesignHover();
+      var sel = buildSelectorForElement(t);
+      stopDesignPickMode();
+      if (sel) openDesignCommentModal(sel);
+    };
+    document.addEventListener('click', designPickListener, true);
+  }
+
+  function getMergedCommentsForExport() {
+    var dismissed = loadDismissedIds();
+    var pending = loadPendingComments();
+    var byId = {};
+    commentsData.forEach(function(c) {
+      var copy = Object.assign({}, c);
+      if (dismissed.indexOf(c.id) !== -1) copy.resolved = true;
+      byId[c.id] = copy;
+    });
+    pending.forEach(function(p) {
+      byId[p.id] = Object.assign({}, p);
+    });
+    var merged = Object.keys(byId).map(function(k) {
+      return byId[k];
+    });
+    merged.sort(function(a, b) {
+      return String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+    });
+    return merged;
+  }
+
+  function buildMergedCommentsJsonString() {
+    return JSON.stringify(getMergedCommentsForExport(), null, 2);
+  }
+
+  function buildCommentsAgentClipboardPrompt() {
+    var json = buildMergedCommentsJsonString();
+    var instruction =
+      'Replace the entire contents of `public/design-comments.json` with the JSON array below (single valid JSON array). ' +
+      'This snapshot merges the last loaded server file with: (1) comments marked Done in this session as `"resolved": true`, and (2) any comments queued from Add comment in this browser. ' +
+      'After updating the file, create a git commit with an appropriate message (push only if I ask you to push).';
+    return instruction + '\n\n```json\n' + json + '\n```\n';
+  }
+
+  function showCommentsClipboardStatus(msg, isError) {
+    if (!commentsClipboardStatusEl) return;
+    commentsClipboardStatusEl.textContent = msg || '';
+    commentsClipboardStatusEl.hidden = !msg;
+    commentsClipboardStatusEl.classList.toggle('proto-comments-panel__status--err', !!isError);
+  }
+
+  function flashUpdateButtonCopied() {
+    if (!commentsUpdateBtn) return;
+    if (commentsUpdateBtnRestoreTimer) clearTimeout(commentsUpdateBtnRestoreTimer);
+    commentsUpdateBtn.textContent = 'Copied';
+    commentsUpdateBtnRestoreTimer = setTimeout(function() {
+      if (commentsUpdateBtn) commentsUpdateBtn.textContent = 'Update';
+      commentsUpdateBtnRestoreTimer = null;
+    }, 1500);
+  }
+
+  function copyCommentsUpdateAgentPrompt() {
+    var payload = buildCommentsAgentClipboardPrompt();
+    var p = copyToClipboard(payload);
+    if (p && typeof p.then === 'function') {
+      p.then(function() {
+        flashUpdateButtonCopied();
+        showCommentsClipboardStatus('', false);
+      }).catch(function() {
+        showCommentsClipboardStatus('Could not copy — allow clipboard access or use a secure context (HTTPS).', true);
+      });
+    } else {
+      flashUpdateButtonCopied();
+    }
+  }
+
+  function clearPendingQueue() {
+    savePendingComments([]);
+    renderCommentsList();
+  }
+
+  function refreshComments() {
+    var url = COMMENTS_JSON_URL + '?t=' + Date.now();
+    fetch(url, { credentials: 'same-origin' })
+      .then(function(r) {
+        if (!r.ok) throw new Error('bad status');
+        return r.json();
+      })
+      .then(function(data) {
+        commentsData = Array.isArray(data) ? data : [];
+        renderCommentsList();
+      })
+      .catch(function() {
+        commentsData = [];
+        renderCommentsList();
+      });
+  }
+
+  function toggleCommentsPanel(btn) {
+    if (!commentsPanelEl) return;
+    var open = !commentsPanelEl.classList.contains('is-open');
+    commentsPanelEl.classList.toggle('is-open', open);
+    btn.setAttribute('aria-pressed', open ? 'true' : 'false');
+    if (open) refreshComments();
+    else {
+      stopDesignPickMode();
+      clearFeatureHighlights();
+      clearCommentRowHoverHighlight();
+      commentsActiveRowId = null;
+    }
+  }
+
+  function buildCommentsButton() {
+    var btn = el('button', {
+      type: 'button',
+      class: 'proto-toolbar__btn proto-toolbar__btn--icon proto-toolbar__comments-trigger',
+      'aria-label': 'Design comments',
+      'aria-pressed': 'false',
+      'data-tooltip': 'Design comments'
+    }, [icon('forum')]);
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleCommentsPanel(btn);
+    });
+    return btn;
+  }
+
+  function buildCommentsPanel() {
+    var panel = el('div', {
+      class: 'proto-comments-panel',
+      'aria-label': 'Design comments'
+    }, []);
+
+    var header = el('div', { class: 'proto-comments-panel__header' }, []);
+    header.appendChild(el('span', { class: 'proto-comments-panel__title' }, ['Comments']));
+    var closeBtn = el('button', {
+      type: 'button',
+      class: 'proto-comments-panel__iconbtn',
+      'aria-label': 'Close comments'
+    }, [icon('close')]);
+    closeBtn.addEventListener('click', function() {
+      panel.classList.remove('is-open');
+      var b = rootEl && rootEl.querySelector('.proto-toolbar__comments-trigger');
+      if (b) b.setAttribute('aria-pressed', 'false');
+      stopDesignPickMode();
+      clearFeatureHighlights();
+      clearCommentRowHoverHighlight();
+    });
+    header.appendChild(closeBtn);
+
+    var toolbar = el('div', { class: 'proto-comments-panel__toolbar' }, []);
+    commentsDesignToggle = el('button', {
+      type: 'button',
+      class: 'proto-comments-panel__pill',
+      'aria-pressed': 'false',
+      'aria-label': 'Add comment — click an element on the page to attach a note'
+    }, ['Add comment']);
+    commentsDesignToggle.addEventListener('click', function() {
+      if (designModeOn) stopDesignPickMode();
+      else startDesignPickMode();
+    });
+
+    var refreshBtn = el('button', {
+      type: 'button',
+      class: 'proto-comments-panel__pill',
+      'aria-label': 'Reload comments from server'
+    }, [icon('refresh'), ' Reload']);
+    refreshBtn.addEventListener('click', function() {
+      refreshComments();
+    });
+
+    commentsUpdateBtn = el('button', {
+      type: 'button',
+      class: 'proto-comments-panel__pill proto-comments-panel__pill--primary',
+      'aria-label': 'Copy update prompt for agent (instruction plus JSON)'
+    }, ['Update']);
+    commentsUpdateBtn.addEventListener('click', function() {
+      copyCommentsUpdateAgentPrompt();
+    });
+
+    var clearBtn = el('button', {
+      type: 'button',
+      class: 'proto-comments-panel__pill',
+      'aria-label': 'Clear queued comments from this browser'
+    }, ['Clear queue']);
+    clearBtn.addEventListener('click', clearPendingQueue);
+
+    toolbar.appendChild(commentsDesignToggle);
+    toolbar.appendChild(refreshBtn);
+    toolbar.appendChild(commentsUpdateBtn);
+    toolbar.appendChild(clearBtn);
+
+    commentsClipboardStatusEl = el('div', {
+      class: 'proto-comments-panel__status',
+      role: 'status',
+      hidden: true
+    }, []);
+
+    commentsSearchInput = el('input', {
+      type: 'search',
+      class: 'proto-comments-panel__search',
+      placeholder: 'Search comments…'
+    });
+    commentsSearchInput.addEventListener('input', function() {
+      renderCommentsList();
+    });
+
+    commentsListHost = el('div', { class: 'proto-comments-panel__list' }, []);
+
+    panel.appendChild(header);
+    panel.appendChild(toolbar);
+    panel.appendChild(commentsClipboardStatusEl);
+    panel.appendChild(commentsSearchInput);
+    panel.appendChild(commentsListHost);
+
+    document.addEventListener('click', function(e) {
+      if (!panel.classList.contains('is-open')) return;
+      if (panel.contains(e.target)) return;
+      if (rootEl && rootEl.contains(e.target)) return;
+      if (e.target.closest('.proto-comments-modal-backdrop')) return;
+      panel.classList.remove('is-open');
+      var b = rootEl && rootEl.querySelector('.proto-toolbar__comments-trigger');
+      if (b) b.setAttribute('aria-pressed', 'false');
+      stopDesignPickMode();
+      clearFeatureHighlights();
+      clearCommentRowHoverHighlight();
+    });
+
+    return panel;
+  }
+
+  function initCommentsFeature() {
+    commentsPanelEl = buildCommentsPanel();
+    document.body.appendChild(commentsPanelEl);
+    window.addEventListener('experiment-changed', function() {
+      if (commentsPanelEl && commentsPanelEl.classList.contains('is-open')) {
+        renderCommentsList();
+      }
+    });
+  }
+
   /* ─── Init ─────────────────────────────────────────────────────── */
 
   function init(userConfig) {
@@ -456,19 +1210,26 @@
       applyBodyClass(currentExp);
 
       rootEl = el('div', { class: 'proto-toolbar', role: 'toolbar', 'aria-label': 'Prototype toolbar' });
-      [buildHome(), buildExperimentDropdown(), buildFeaturesButton(), buildTriggersFlyout()]
-        .forEach(function(c) { if (c) rootEl.appendChild(c); });
+      var mainCluster = el('div', { class: 'proto-toolbar__main' });
+      [buildHome(), buildExperimentDropdown(), buildFeaturesButton(), buildTriggersFlyout(), buildCommentsButton()]
+        .forEach(function(c) { if (c) mainCluster.appendChild(c); });
+
+      rootEl.appendChild(buildCollapseToggleButton());
+      rootEl.appendChild(mainCluster);
 
       var overlay = buildFeaturesOverlayEl();
       if (overlay) rootEl.appendChild(overlay);
 
       document.body.appendChild(rootEl);
+      initCommentsFeature();
+      applyToolbarCollapsed(readToolbarCollapsed());
     });
   }
 
   global.PrototypeToolbar = {
     init: init,
     setExperiment: setExperiment,
-    getExperiment: function() { return currentExp; }
+    getExperiment: function() { return currentExp; },
+    reloadDesignComments: refreshComments
   };
 })(window);

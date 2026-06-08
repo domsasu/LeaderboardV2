@@ -24,7 +24,7 @@ The [Coursera prototype toolbar](https://github.com/nella-droid/coursera-prototy
 4. **Home leaderboard**  
    - **Experiment A:** `HomeLeaderboard` in `Home.tsx` — pill cohort tabs from `getHomeLeaderboardCohortTabs('a')` / board data in `homeLeaderboardSprint1Data.ts`.  
    - **Experiments B and C:** `HomeLeaderboardExperimentB.tsx` + `homeLeaderboardExperimentBData.ts` (Figma 222:1854 — two-column board; sprint-1 header with days-left pill, subtitle, **Edit cohorts**, and cohort `<select>` when **B** or **C unlocked**). **C locked** keeps only the **Leaderboard** title above the blurred grid with “Learn for 30 minutes to unlock”.  
-   - **Experiment D:** `HomeLeaderboardExperimentD.tsx` — Figma **278:4639** promotion while locked (headline, weekly copy, **Resume learning**, animated media on the right). After unlock, D renders the same sprint-1 board as B/C via `HomeLeaderboardExperimentB` with `prototypeExperiment="d"`. **Do not** change A’s leaderboard when editing B/C/D; edit `Home.tsx` + the experiment component files.
+   - **Experiment D:** `HomeLeaderboardExperimentD.tsx` — Figma **278:4639** promotion while locked (headline, weekly copy, **Resume learning**, **Around you** mini-board preview on the right). After unlock, D renders the same sprint-1 board as B/C via `HomeLeaderboardExperimentB` with `prototypeExperiment="d"`. **Do not** change A’s leaderboard when editing B/C/D; edit `Home.tsx` + the experiment component files.
 
 5. **Home leaderboard unlock (B, C, and D)**  
    Unlock when **`m1-l1` through `m1-l5`** are all `Status.COMPLETED` in `courseData`. Logic lives in [`components/homeLeaderboardGate.ts`](components/homeLeaderboardGate.ts) (`areHomeLeaderboardUnlockLessonsComplete`, `isHomeLeaderboardExperimentBCard`, `isHomeLeaderboardBlurGateExperiment`, `usesWiderHomeLeaderboardCohortTabs`).  
@@ -42,3 +42,7 @@ The [Coursera prototype toolbar](https://github.com/nella-droid/coursera-prototy
 ## Intentionally promoting a change to all variants
 
 Remove the `ExperimentGate` wrapper (or widen `variants`), move shared styles out of `body.proto-experiment-*` blocks, merge cohort tab lists for A, **or** port the same markup from `HomeLeaderboardExperimentB` into `HomeLeaderboard` so all experiments use one component.
+
+## Design comments (toolbar)
+
+Prototype feedback can be anchored with a CSS selector and optional `experimentId` in [`public/design-comments.json`](../public/design-comments.json). See [prototype-comments.md](./prototype-comments.md) for the schema and how comments filter by the current experiment.

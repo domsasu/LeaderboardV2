@@ -1,11 +1,11 @@
 import React from 'react';
+import { MiniLeaderboardRow } from './MyLearning';
 import { HomeLeaderboardExperimentB } from './HomeLeaderboardExperimentB';
-
-const PROMO_MEDIA_SRC = `${import.meta.env.BASE_URL}leaderboard-promo-experiment-d.png`;
+import { HOME_LEADERBOARD_B_BOARDS } from './homeLeaderboardExperimentBData';
 
 /**
  * Experiment **D** — home leaderboard promotion (Figma Leaderboards_Home Sprint 1, node 278:4639).
- * Locked: two-column promo (copy + animated media). Unlocked: same sprint-1 board as B/C via {@link HomeLeaderboardExperimentB}.
+ * Locked: two-column promo (copy + **Around you** preview using the same rows as B/C). Unlocked: same sprint-1 board as B/C via `HomeLeaderboardExperimentB`.
  */
 export function HomeLeaderboardExperimentD({
   leaderboardUnlocked,
@@ -23,6 +23,8 @@ export function HomeLeaderboardExperimentD({
       />
     );
   }
+
+  const board = HOME_LEADERBOARD_B_BOARDS.careerswitchers;
 
   return (
     <div
@@ -53,15 +55,21 @@ export function HomeLeaderboardExperimentD({
           </div>
         </div>
 
-        <div className="relative min-h-[220px] w-full shrink-0 overflow-hidden bg-[var(--cds-color-grey-25)] lg:min-h-[300px] lg:flex-1">
-          <img
-            src={PROMO_MEDIA_SRC}
-            alt=""
-            className="home-lb-d-promo-img absolute inset-0 h-full w-full object-cover object-center"
-            width={1354}
-            height={728}
-            decoding="async"
-          />
+        <div className="flex w-full shrink-0 flex-col justify-center bg-[var(--cds-color-grey-25)] p-4 sm:p-5 lg:min-h-[300px] lg:flex-1 lg:py-8">
+          <div className="rounded-[var(--cds-border-radius-200)] border border-[var(--cds-color-grey-100)] bg-[var(--cds-color-white)] p-5">
+            <p className="cds-body-tertiary mb-1.5 text-[var(--cds-color-grey-600)]">Around you</p>
+            <div className="space-y-1">
+              {board.around.map((p) => (
+                <MiniLeaderboardRow
+                  key={`d-promo-around-${p.rank}`}
+                  peer={p}
+                  isUser={p.rank === board.userRank}
+                  isMedal={false}
+                  showYouSuffix
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

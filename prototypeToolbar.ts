@@ -5,6 +5,8 @@ declare global {
       init: (config: PrototypeToolbarInitConfig) => void;
       getExperiment: () => string;
       setExperiment: (id: string) => void;
+      /** Re-fetch `public/design-comments.json` after file edits (same-origin GET). */
+      reloadDesignComments?: () => void;
     };
   }
 }
@@ -149,7 +151,7 @@ export function initCourseraPrototypeToolbar(handlers: {
       },
       d: {
         notice:
-          'Home leaderboard slot uses `HomeLeaderboardExperimentD`: Figma 278:4639 promotion (headline + weekly copy + Resume learning) with animated media on the right until m1-l1–m1-l5 unlock; then the same sprint-1 board as B/C.',
+          'Home leaderboard slot uses `HomeLeaderboardExperimentD`: Figma 278:4639 promotion (headline + weekly copy + Resume learning) with an Around you mini-board preview on the right until m1-l1–m1-l5 unlock; then the same sprint-1 board as B/C.',
         sections: [
           {
             title: 'Visual treatment (D — leaderboard promo)',
@@ -166,7 +168,7 @@ export function initCourseraPrototypeToolbar(handlers: {
                 hl: '#proto-home-daily-goals',
               },
               {
-                text: 'Leaderboard: promo band + motion media (see `HomeLeaderboardExperimentD`)',
+                text: 'Leaderboard: promo band + Around you preview (see `HomeLeaderboardExperimentD`)',
                 hl: '#proto-home-leaderboard',
               },
             ],
@@ -175,7 +177,7 @@ export function initCourseraPrototypeToolbar(handlers: {
             title: 'Leaderboard layout (D — promo until unlock)',
             items: [
               {
-                text: 'Two-column promo: copy + gradient headline + Resume learning; right column media (`public/leaderboard-promo-experiment-d.png`, optional GIF swap)',
+                text: 'Two-column promo: copy + gradient headline + Resume learning; right column Around you preview (same rows as B/C #careerswitchers)',
                 hl: '#proto-home-leaderboard',
               },
               {

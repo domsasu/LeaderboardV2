@@ -1,0 +1,11 @@
+---
+description: When adding or resolving prototype toolbar design comments (Git JSON).
+globs: public/design-comments.json
+alwaysApply: false
+---
+
+# Prototype design comments
+
+- Source of truth: [`public/design-comments.json`](public/design-comments.json) (array of objects). Full schema and UX: [`docs/prototype-comments.md`](docs/prototype-comments.md).
+- When the user pastes **Copy JSON** output from the toolbar, the full prompt from **Update** (instruction + fenced JSON), or asks to add/sync comments: apply to [`public/design-comments.json`](public/design-comments.json) — for **Update** pastes, replace the file contents with the JSON array from the fence; for single objects, merge into the array by `id` (no duplicates). Keep valid JSON; prefer stable `selector` values (`#id`, `[data-*]`).
+- To resolve durably: set `"resolved": true` on the object (or remove it) and ensure the file stays sorted or consistent with team convention.

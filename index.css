@@ -1210,25 +1210,3 @@ input, button, textarea, select {
 .animate-breathe {
   animation: breathe 0.6s ease-in-out;
 }
-
-/* Experiment D — home leaderboard promo media (subtle motion; swap src for a GIF if needed) */
-@keyframes home-lb-d-promo-drift {
-  0%,
-  100% {
-    transform: scale(1.04);
-  }
-  50% {
-    transform: scale(1.1) translate(-1.5%, -0.5%);
-  }
-}
-
-.home-lb-d-promo-img {
-  animation: home-lb-d-promo-drift 14s ease-in-out infinite;
-  will-change: transform;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-lb-d-promo-img {
-    animation: none;
-  }
-}

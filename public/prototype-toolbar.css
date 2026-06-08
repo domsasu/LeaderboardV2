@@ -39,6 +39,23 @@
   font-family: var(--pt-font);
 }
 
+.proto-toolbar__main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.proto-toolbar.is-collapsed .proto-toolbar__main {
+  display: none;
+}
+.proto-toolbar.is-collapsed .proto-toolbar__features-overlay {
+  display: none !important;
+}
+/* Rotate glyph 90° so vertical unfold_* reads as horizontal strip collapse/expand. */
+.proto-toolbar__collapse-toggle .material-symbols-rounded {
+  display: inline-block;
+  transform: rotate(90deg);
+}
+
 /* ─── Buttons (shared) ──────────────────────────────────────────── */
 .proto-toolbar__btn {
   height: 40px;
@@ -319,4 +336,399 @@
   outline-offset: 3px !important;
   box-shadow: 0 0 0 3px #ffffff, 0 0 12px rgba(212, 53, 28, 0.25) !important;
   transition: outline 0.2s, box-shadow 0.2s !important;
+}
+
+/* Add-comment picking + comments panel: Cursor-like hover target (blue ring; cleared on pick / exit / row mouseleave) */
+.proto-design-hover-hl {
+  outline: 2px solid #0056d2 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.95) !important;
+  transition: outline 0.08s, box-shadow 0.08s !important;
+}
+
+/* ─── Design comments panel (Git-tracked JSON) ─────────────────── */
+
+.proto-comments-panel {
+  --cp-bg: #16181d;
+  --cp-surface: #1e2128;
+  --cp-border: #2a2e36;
+  --cp-text: #e8eaed;
+  --cp-muted: #9aa0ac;
+  --cp-accent: #689bff;
+  --cp-accent-soft: rgba(104, 155, 255, 0.18);
+  --cp-radius: var(--pt-radius-md);
+
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(400px, 100vw - 24px);
+  max-width: 100vw;
+  height: 100vh;
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  font-family: var(--pt-font, inherit);
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+  z-index: 10050;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+  border-left: 1px solid var(--cp-border);
+}
+.proto-comments-panel.is-open {
+  transform: translateX(0);
+}
+
+.proto-comments-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--cp-border);
+  gap: 12px;
+}
+.proto-comments-panel__title {
+  font-size: 18px;
+  font-weight: 600;
+}
+.proto-comments-panel__iconbtn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--cp-radius);
+  background: transparent;
+  color: var(--cp-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.proto-comments-panel__iconbtn:hover {
+  background: var(--cp-surface);
+  color: var(--cp-text);
+}
+.proto-comments-panel__iconbtn .material-symbols-rounded { font-size: 22px; }
+
+.proto-comments-panel__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--cp-border);
+}
+.proto-comments-panel__status {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cp-muted);
+  padding: 0 16px 10px;
+  margin-top: -2px;
+}
+.proto-comments-panel__status--err {
+  color: #ffb4b4;
+}
+.proto-comments-panel__pill {
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  border-radius: var(--cp-radius);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.proto-comments-panel__pill:hover {
+  border-color: var(--cp-accent);
+  background: #252830;
+}
+.proto-comments-panel__pill.is-on {
+  background: var(--cp-accent-soft);
+  border-color: var(--cp-accent);
+  color: var(--cp-accent);
+}
+.proto-comments-panel__pill .material-symbols-rounded { font-size: 18px; }
+.proto-comments-panel__pill--primary {
+  background: var(--cp-accent);
+  border-color: var(--cp-accent);
+  color: #0a0c10;
+}
+.proto-comments-panel__pill--primary:hover {
+  filter: brightness(1.08);
+}
+
+.proto-comments-panel__search {
+  margin: 12px 16px 8px;
+  width: calc(100% - 32px);
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius);
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font-family: inherit;
+  font-size: 14px;
+}
+.proto-comments-panel__search::placeholder { color: var(--cp-muted); }
+.proto-comments-panel__search:focus {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 1px;
+}
+
+.proto-comments-panel__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proto-comments-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--cp-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.proto-comments-empty__code {
+  display: inline;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  background: var(--cp-surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--cp-text);
+}
+
+.proto-comments-row {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--cp-border);
+  border-radius: var(--pt-radius-lg);
+  background: var(--cp-surface);
+  padding: 12px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.proto-comments-row:hover {
+  border-color: #3d4450;
+}
+.proto-comments-row.is-active {
+  border-color: var(--cp-accent);
+  box-shadow: 0 0 0 1px var(--cp-accent-soft);
+}
+.proto-comments-row.is-queued {
+  border-left: 3px solid var(--cp-accent);
+}
+.proto-comments-row:focus {
+  outline: none;
+}
+.proto-comments-row:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 2px;
+}
+
+.proto-comments-row__meta {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.proto-comments-row__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a6fff, #8b5cf6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.proto-comments-row__meta-text { min-width: 0; flex: 1; }
+.proto-comments-row__title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--cp-text);
+  margin-bottom: 2px;
+}
+.proto-comments-row__sub {
+  font-size: 12px;
+  color: var(--cp-muted);
+}
+.proto-comments-row__body {
+  font-size: 13px;
+  color: #c4c7ce;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.proto-comments-row__actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+.proto-comments-row__done {
+  border: 1px solid var(--cp-border);
+  background: transparent;
+  color: var(--cp-muted);
+  border-radius: var(--cp-radius);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.proto-comments-row__done:hover {
+  color: var(--cp-text);
+  border-color: var(--cp-muted);
+}
+
+/* Modal is under `document.body`, not `.proto-toolbar` — define tokens here so
+   `var(--pt-surface)` etc. resolve (otherwise modal background is effectively transparent). */
+.proto-comments-modal-backdrop {
+  --pt-surface: #ffffff;
+  --pt-surface-text: #1f1f1f;
+  --pt-text-secondary: #5a5e6b;
+  --pt-border: #e6e7ea;
+  --pt-radius-lg: 16px;
+  --pt-radius-md: 8px;
+  --pt-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+  --pt-font: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+  --pt-accent: #0056d2;
+  --pt-accent-hover: #003d99;
+  --pt-accent-soft: #ebf2fb;
+
+  position: fixed;
+  inset: 0;
+  z-index: 10100;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.proto-comments-modal {
+  width: 100%;
+  max-width: 440px;
+  max-height: min(90vh, 640px);
+  overflow-y: auto;
+  background: #ffffff;
+  background-color: #ffffff;
+  color: var(--pt-surface-text);
+  border-radius: var(--pt-radius-lg);
+  box-shadow: var(--pt-shadow-lg), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  padding: 20px 22px;
+  font-family: var(--pt-font, inherit);
+  position: relative;
+  isolation: isolate;
+}
+.proto-comments-modal__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.proto-comments-modal__top-title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  padding-top: 2px;
+}
+.proto-comments-modal__submit-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--pt-accent);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--pt-shadow-md);
+  transition: background 0.15s;
+}
+.proto-comments-modal__submit-icon:hover {
+  background: var(--pt-accent-hover);
+}
+.proto-comments-modal__submit-icon .material-symbols-rounded {
+  font-size: 24px;
+}
+.proto-comments-modal__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pt-text-secondary);
+  margin: 10px 0 4px;
+}
+.proto-comments-modal__input,
+.proto-comments-modal__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--pt-border);
+  border-radius: var(--pt-radius-md);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+  color: var(--pt-surface-text);
+}
+.proto-comments-modal__textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+.proto-comments-modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  justify-content: flex-end;
+}
+.proto-comments-modal__btn {
+  border: 1px solid var(--pt-border);
+  background: #ffffff;
+  color: var(--pt-surface-text);
+  border-radius: var(--pt-radius-md);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.proto-comments-modal__btn:hover { background: var(--pt-accent-soft); }
+.proto-comments-modal__btn--ghost {
+  background: transparent;
+  margin-right: auto;
+}
+.proto-comments-modal__btn--primary {
+  background: var(--pt-accent);
+  border-color: var(--pt-accent);
+  color: #fff;
+}
+.proto-comments-modal__btn--primary:hover {
+  background: var(--pt-accent-hover);
+}
+
+body.proto-comments-design-mode {
+  cursor: crosshair !important;
+}
+body.proto-comments-design-mode .proto-toolbar,
+body.proto-comments-design-mode .proto-comments-panel {
+  cursor: default;
+}
+
+.proto-toolbar__comments-trigger[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--pt-accent);
 }

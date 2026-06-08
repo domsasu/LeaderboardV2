@@ -120,6 +120,45 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const currentViewRef = useRef(currentView);
+  currentViewRef.current = currentView;
+  const pendingProtoCommentHighlightRef = useRef<string | null>(null);
+
+  /** Prototype toolbar: jump to the right app view before highlighting a comment target (e.g. #proto-home-* → Home). */
+  useEffect(() => {
+    function resolveViewFromCommentSelector(selector: string): View | null {
+      if (!selector) return null;
+      if (/#proto-home[-\w]*/.test(selector) || selector.includes('proto-home')) return 'home';
+      return null;
+    }
+    const onNavigate = (e: Event) => {
+      const ce = e as CustomEvent<{ selector: string }>;
+      const sel = ce.detail?.selector;
+      if (sel == null || sel === '') return;
+      const targetView = resolveViewFromCommentSelector(sel);
+      if (targetView && currentViewRef.current !== targetView) {
+        pendingProtoCommentHighlightRef.current = sel;
+        setCurrentView(targetView);
+      } else {
+        window.dispatchEvent(new CustomEvent('proto-comment-highlight-run', { detail: { selector: sel } }));
+      }
+    };
+    window.addEventListener('proto-comment-navigate', onNavigate as EventListener);
+    return () => window.removeEventListener('proto-comment-navigate', onNavigate as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const pending = pendingProtoCommentHighlightRef.current;
+    if (!pending) return;
+    pendingProtoCommentHighlightRef.current = null;
+    const outer = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent('proto-comment-highlight-run', { detail: { selector: pending } }));
+      });
+    });
+    return () => cancelAnimationFrame(outer);
+  }, [currentView]);
+
   // Derive the active lesson object from the current course data state
   const activeLesson = useMemo(() => {
     for (const module of courseData.modules) {
